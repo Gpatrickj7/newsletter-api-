@@ -1,10 +1,10 @@
  const { MongoClient } = require('mongodb');
 
 module.exports = async (req, res) => {
-  // Enable CORS for your GitHub Pages domain
+  // Enables CORS for your GitHub Pages domain
   
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', 'https://gpatrickj7.github.io');
+  res.setHeader('Access-Control-Allow-Origin', 'https://toftewellness.com');
   res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   

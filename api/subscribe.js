@@ -2,9 +2,9 @@
 
 module.exports = async (req, res) => {
   // Enable CORS for your GitHub Pages domain
-  // Replace 'yourusername' with your actual GitHub username
+  
   res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Origin', 'https://yourusername.github.io');
+  res.setHeader('Access-Control-Allow-Origin', 'https://gpatrickj7.github.io');
   res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   

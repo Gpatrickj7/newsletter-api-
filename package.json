@@ -1,17 +1,19 @@
 {
   "name": "newsletter-api-",
   "version": "1.0.0",
+  "description": "API for newsletter subscriptions",
   "main": "index.js",
   "scripts": {
+    "dev": "vercel dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Gpatrickj7/newsletter-api-.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": ["newsletter", "api", "vercel", "mongodb"],
+  "author": "Gunnar Johnson",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/Gpatrickj7/newsletter-api-/issues"
   },
@@ -19,5 +21,8 @@
   "description": "",
   "dependencies": {
     "mongodb": "^6.16.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

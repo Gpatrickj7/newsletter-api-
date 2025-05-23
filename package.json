@@ -20,7 +20,9 @@
   "homepage": "https://github.com/Gpatrickj7/newsletter-api-#readme",
   "description": "",
   "dependencies": {
-    "mongodb": "^6.16.0"
+    "mongodb": "^6.16.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
   },
   "engines": {
     "node": ">=18"

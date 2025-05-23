@@ -1,7 +1,7 @@
  const { MongoClient } = require('mongodb');
 
 module.exports = async (req, res) => {
-  // Enables CORS for your GitHub Pages domain
+  // Enables CORS GitHub Pages domain
   
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', 'https://toftewellness.com');
@@ -30,11 +30,11 @@ module.exports = async (req, res) => {
       // Connect to MongoDB
       const client = new MongoClient(process.env.MONGODB_URI);
 
-      
+
       await client.connect();
       console.log('Connected to MongoDB');
       
-      const database = client.db('newsletter');
+      const database = client.db('toftewellness');
       const collection = database.collection('subscribers');
       
       // Check if email already exists

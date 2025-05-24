@@ -3,6 +3,31 @@ const {MongoClient} = require('mongodb');  //mongodb client for database connect
 const bcrypt = require('bcryptjs');        //bcrypt for password hashing/verification
 const jwt = require('jsonwebtoken');       //jwt for creating authentication tokens 
 
+// Rate limiting storage (in-memory)
+const loginAttempts = new Map();
+
+//Rate limiting function
+function checkRateLimit(ip, maxAttempts = 5, windowMs = 15 * 60 *1000) {
+    const now = Date.now();
+    const key = `login_${ip}`;
+
+    // Get current attemps for this IP
+    const attempts = loginAttempts.get(key) || [];
+
+    // Remove old attempts outside the time winodw
+    const validAttempts = attempts.filter(time => now - time < windowMs);
+
+    // Check if over limit
+    if (validAttempts.length >= maxAttempts) {
+        return false; // Rate limited
+    }
+
+    // Add this attempt
+    validAttempts.push(now);
+    loginAttempts.set(key, validAttempts);
+
+    return true; // Allow request
+}
 module.exports = async (req, res) => {   //Export as async (Vercel Serverless pattern)
 
     //CORS headers allowing website to call this API 
@@ -19,6 +44,22 @@ module.exports = async (req, res) => {   //Export as async (Vercel Serverless pa
     //Only process POST requests (login submissions)
     if (req.method === 'POST') {
         try {
+
+            //Get client IP
+            const clientIP = req.headers['x-forwarded-for'] ||
+            req.headers['x-real-ip'] ||
+            req.connection.remoteAddress ||
+            'unknown';
+
+            // Check rate limit
+            if (!checkRateLimit(clientIP)) {
+                return res.status(429).json ({
+                    success: false,
+                    error: 'Too many login attempts. Please try again in 15 minutes.'
+                });
+            }
+
+
             const { email, password } = req.body;   //Extract email and password from request
 
             if (!email || !password) {

@@ -1,5 +1,25 @@
  const { MongoClient } = require('mongodb');
 
+ // Rate limiting storage (in-memory)
+const newsletterAttempts = new Map();
+
+// Rate limiting function
+function checkRateLimit(ip, maxAttempts = 3, windowMs = 60 * 60 * 1000) { // 3 per hour
+    const now = Date.now();
+    const key = `newsletter_${ip}`;
+    
+    const attempts = newsletterAttempts.get(key) || [];
+    const validAttempts = attempts.filter(time => now - time < windowMs);
+    
+    if (validAttempts.length >= maxAttempts) {
+        return false; // Rate limited
+    }
+    
+    validAttempts.push(now);
+    newsletterAttempts.set(key, validAttempts);
+    return true; // Allow request
+}
+
 module.exports = async (req, res) => {
   // Enables CORS GitHub Pages domain
   
@@ -16,6 +36,20 @@ module.exports = async (req, res) => {
   // Only allow POST requests
   if (req.method === 'POST') {
     try {
+
+      // Get client IP
+      const clientIP = req.headers['x-forwarded-for'] || 
+                           req.headers['x-real-ip'] || 
+                           req.connection.remoteAddress || 
+                           'unknown';
+            
+      // Check rate limit
+      if (!checkRateLimit(clientIP)) {
+        return res.status(429).json({
+          success: false,
+          error: 'Too many signup attempts. Please try again in an hour.'
+        });
+      }
       // Parse the email from request body
       const { email } = req.body;
       

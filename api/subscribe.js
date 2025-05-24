@@ -52,15 +52,46 @@ module.exports = async (req, res) => {
       }
       // Parse the email from request body
       const { email } = req.body;
-      
-      // Validate email
-      if (!email || !email.includes('@')) {
-        return res.status(400).json({ 
+     
+      //Check if email exists
+      if (!email) {
+        return res.status(400).json ({
           success: false,
-          error: 'Valid email required' 
+          error: 'Email is required'
         });
       }
       
+      // Input sanitization
+      const sanitizedEmail = email.trim().toLowerCase();
+
+      // Email length limit (RFC 5321 standard)
+      if (sanitizedEmail.length > 254) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email address is too long'
+        });
+      }
+
+      // Enhanced email validation regex
+      const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+
+      if (!emailRegex.test(sanitizedEmail)) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Please enter a valid email address' 
+        });
+      }
+
+      // Additional security checks 
+      if (sanitizedEmail.includes('..') || sanitizedEmail.startsWith('.') || sanitizedEmail.endsWith('.')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid email format'
+        });
+      }
+      
+
+
       // Connect to MongoDB
       const client = new MongoClient(process.env.MONGODB_URI);
 
@@ -72,7 +103,7 @@ module.exports = async (req, res) => {
       const collection = database.collection('subscribers');
       
       // Check if email already exists
-      const existingUser = await collection.findOne({ email: email.toLowerCase() });
+      const existingUser = await collection.findOne({ email: sanitizedEmail });
       if (existingUser) {
         await client.close();
         return res.status(200).json({ 
@@ -84,14 +115,14 @@ module.exports = async (req, res) => {
       
       // Insert new subscriber
       const result = await collection.insertOne({
-        email: email.toLowerCase(),
+        email: sanitizedEmail,
         subscribed_at: new Date(),
         source: req.headers.referer || 'direct',
         ip_address: req.headers['x-forwarded-for'] || req.connection.remoteAddress
       });
       
       await client.close();
-      console.log('Subscriber added:', email);
+      console.log('Subscriber added:', sanitizedEmail);
       
       return res.status(200).json({ 
         success: true,

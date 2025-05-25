@@ -1,4 +1,4 @@
- const { MongoClient } = require('mongodb');
+const { MongoClient } = require('mongodb');
 
 // Rate limiting storage (in-memory)
 const contactAttempts = new Map();
@@ -32,6 +32,7 @@ module.exports = async (req, res) => {
     }
     
     if (req.method === 'POST') {
+        let client;
         try {
             const clientIP = req.headers['x-forwarded-for'] || 
                            req.headers['x-real-ip'] || 
@@ -45,7 +46,7 @@ module.exports = async (req, res) => {
                 });
             }
 
-            const { name, email, inquiryType, message } = req.body;
+            const { name, email, inquiryType, subject, message } = req.body;
             
             // Validation
             if (!name || !email || !inquiryType || !message) {
@@ -60,6 +61,7 @@ module.exports = async (req, res) => {
                 name: name.trim(),
                 email: email.trim().toLowerCase(),
                 inquiryType: inquiryType,
+                subject: subject ? subject.trim() : `${inquiryType} inquiry from ${name.trim()}`,
                 message: message.trim()
             };
 
@@ -73,28 +75,62 @@ module.exports = async (req, res) => {
                 });
             }
 
+            // Additional validation
+            if (sanitizedData.name.length < 2) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Name must be at least 2 characters long'
+                });
+            }
+
+            if (sanitizedData.message.length < 10) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Message must be at least 10 characters long'
+                });
+            }
+
             // Connect to MongoDB
-            const client = new MongoClient(process.env.MONGODB_URI);
+            client = new MongoClient(process.env.MONGODB_URI);
             await client.connect();
             
             const database = client.db('toftewellness');
             const collection = database.collection('contact_inquiries');
+            
+            // Set priority based on inquiry type
+            let priority = 'normal';
+            if (inquiryType === 'wholesale' || inquiryType === 'partnership') {
+                priority = 'high';
+            } else if (inquiryType === 'media') {
+                priority = 'urgent';
+            }
             
             // Insert inquiry
             const result = await collection.insertOne({
                 ...sanitizedData,
                 submitted_at: new Date(),
                 status: 'new',
+                priority: priority,
                 source: req.headers.referer || 'direct',
-                ip_address: clientIP
+                ip_address: clientIP,
+                user_agent: req.headers['user-agent'] || 'unknown',
+                responded_at: null,
+                assigned_to: null,
+                tags: [],
+                notes: []
             });
             
             await client.close();
-            console.log('Contact inquiry added:', sanitizedData.email);
+            console.log('Contact inquiry added:', {
+                id: result.insertedId,
+                email: sanitizedData.email,
+                type: inquiryType,
+                priority: priority
+            });
             
             return res.status(200).json({ 
                 success: true,
-                message: 'Your message has been sent successfully!',
+                message: 'Your message has been sent successfully! We\'ll get back to you within 24 hours.',
                 id: result.insertedId
             });
             
@@ -104,6 +140,10 @@ module.exports = async (req, res) => {
                 success: false,
                 error: 'Server error occurred. Please try again.'
             });
+        } finally {
+            if (client) {
+                await client.close();
+            }
         }
     }
     
